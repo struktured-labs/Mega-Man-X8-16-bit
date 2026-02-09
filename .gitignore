@@ -49,3 +49,8 @@ Thumbs.db
 *.wmv
 
 .import/
+setenv.sh
+tmp/
+logs/
+save-backups/
+tools/
