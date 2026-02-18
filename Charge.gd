@@ -172,6 +172,7 @@ func emit_fire_charged_signal(_charged_time):
 func start_vfx():
 	Log("Started VFX")
 	play_sound(sound, false)
+	audio.pitch_scale = 1.0 / (1.0 - charge_time_reduction) if charge_time_reduction > 0 else 1.0
 	emit_charging_particle()
 	enable_charge_shader()
 	change_color(color)
@@ -189,6 +190,7 @@ func stop_vfx():
 
 func play_super_sound():
 	audio2.stream = super_charged_sound
+	audio2.pitch_scale = 1.0 / (1.0 - charge_time_reduction) if charge_time_reduction > 0 else 1.0
 	audio2.play()
 
 func stop_sound():
