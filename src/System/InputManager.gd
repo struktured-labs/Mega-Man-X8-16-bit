@@ -165,8 +165,8 @@ func define_event_type(event):
 		return InputEventMouseButton
 	push_error("Unable to find type for event " + str(event))
 
-signal double_check(event_text, action_display, action_key)
-signal double_detected(event_text, action_display, action_key)
+signal double_check(event_text, action_display, action_key, input_type)
+signal double_detected(event_text, action_display, action_key, input_type)
 
 func set_new_action_event(action,event,old_event) -> void:
 	ui_case_handler(event, action)
