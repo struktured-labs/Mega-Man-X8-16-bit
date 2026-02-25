@@ -66,6 +66,7 @@ KEYCFG_TITLE,KEY CONFIG,CONFIGURAÇÃO DE BOTÕES,CONFIGURACIÓN DE BOTONES,DEIX
 ACTION_CTG,Action,Ação,Acción,Ação
 KEYBOARD_CTG,Keyboard,Teclado,Teclado,Teclado
 JOYPAD_CTG,Joypad,Controle,Joystick,Controle
+JOYPAD2_CTG,Joypad 2,Controle 2,Joystick 2,Controle 2
 ,,,,
 LEFT_ACT,left,esquerda,Izquierda,esquerda
 RIGHT_ACT,right,direita,Derecha,direita

@@ -47,5 +47,7 @@ func Set_neighbours(last_child) -> void:
 	exit.focus_neighbour_bottom = get_child(0).get_child(0).get_path()
 	get_child(0).get_child(0).focus_neighbour_top = exit.get_path()
 	get_child(0).get_child(1).focus_neighbour_top = exit.get_path()
+	get_child(0).get_child(2).focus_neighbour_top = exit.get_path()
 	last_child.get_child(0).focus_neighbour_bottom = exit.get_path()
 	last_child.get_child(1).focus_neighbour_bottom = exit.get_path()
+	last_child.get_child(2).focus_neighbour_bottom = exit.get_path()

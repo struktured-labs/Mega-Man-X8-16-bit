@@ -11,8 +11,46 @@ var modified_keys = {}
 
 var combos : Dictionary
 
+var _joy_log_file : File
+var _joy_log_path := "user://joy_log.txt"
+
+# Conflict groups: actions in the same group warn when sharing a button
+var conflict_groups := {
+	"gameplay": [
+		"move_left", "move_right", "move_up", "move_down",
+		"fire", "alt_fire", "jump", "dash",
+		"select_special", "weapon_select_left", "weapon_select_right",
+		"reset_weapon"
+	],
+	"menu": ["pause", "ui_accept"],
+	"weapon_wheel": ["analog_left", "analog_right", "analog_up", "analog_down"],
+}
+
+func get_conflict_group(action: String) -> String:
+	for group in conflict_groups:
+		if action in conflict_groups[group]:
+			return group
+	return ""
+
+func actions_can_conflict(action_a: String, action_b: String) -> bool:
+	var group_a = get_conflict_group(action_a)
+	var group_b = get_conflict_group(action_b)
+	return group_a != "" and group_a == group_b
+
 func _input(_event: InputEvent) -> void:
-	pass
+	# TEMP: Log all joypad events to file
+	if _event is InputEventJoypadButton:
+		_log_joy("BTN %d pressed=%s" % [_event.button_index, str(_event.pressed)])
+	elif _event is InputEventJoypadMotion:
+		if abs(_event.axis_value) > 0.15:
+			_log_joy("AXIS %d value=%.3f" % [_event.axis, _event.axis_value])
+
+func _log_joy(msg: String) -> void:
+	if not _joy_log_file:
+		_joy_log_file = File.new()
+		_joy_log_file.open(_joy_log_path, File.WRITE)
+	_joy_log_file.store_line(str(OS.get_ticks_msec()) + " " + msg)
+	_joy_log_file.flush()
 
 func _ready() -> void:
 	var _s = Configurations.connect("value_changed",self,"activate_dash")
@@ -28,8 +66,8 @@ func activate_dash(key) -> void:
 
 func _physics_process(delta: float) -> void:
 	timer += delta
-	add_inputs_to_list() 
-	check_for_combos() 
+	add_inputs_to_list()
+	check_for_combos()
 	release_input_when_key_is_released()
 
 func check_for_combos() -> void:
@@ -47,7 +85,7 @@ func get_combos_that_matches_last_input() -> Array:
 		elif is_facing_back():
 			if get_last_input() == Tools.flip_input(combo_last_input):
 				matching_combos.append(key)
-		 
+
 	return matching_combos
 
 func is_facing_back() -> bool:
@@ -73,7 +111,7 @@ func activate_combo(key) -> void:
 	current_associated_key = get_last_input()
 	last_inputs.clear()
 	last_timings.clear()
-	
+
 func release_input_when_key_is_released() -> void:
 	if current_associated_key != "":
 		if Input.is_action_just_released(current_associated_key):
@@ -86,7 +124,7 @@ func release_input_when_key_is_released() -> void:
 func get_last_input() -> String:
 	if size()>= 0:
 		return last_inputs[size()]
-			
+
 	return ""
 
 func size() -> int:
@@ -100,17 +138,13 @@ func add_to_file(action,event,old_event):
 		modified_keys[new_action] = [event, old_event]
 
 func load_modified_keys(new_keys) -> void:
-	if new_keys:
-		modified_keys.clear()
-		for action in new_keys:
-			var actual_action = action.trim_prefix("00_")
-			var new_key = str2var(new_keys[action][0])
-			var current_key = get_default_key(actual_action,str2var(new_keys[action][1]))
-			set_new_action_event(actual_action,new_key,current_key)
-		Savefile.save() #TODO: Investigar o porquê desse save
-	else:
-		modified_keys.clear()
-		push_warning("No Loading. Keys: " + str(new_keys))
+	# TEMP: Force-reset all keybinds to defaults (remove after confirming controller works)
+	print("InputManager: Resetting all keybinds to defaults")
+	modified_keys.clear()
+	InputMap.load_from_globals()
+	# Force English locale
+	TranslationServer.set_locale("en")
+	return
 
 func get_default_key(action, old_event) -> InputEvent:
 	var InputType = define_event_type(old_event)
@@ -130,9 +164,9 @@ func define_event_type(event):
 	elif event is InputEventMouseButton:
 		return InputEventMouseButton
 	push_error("Unable to find type for event " + str(event))
-	
-signal double_check(event_text,action_name)
-signal double_detected(event_text,actionname)
+
+signal double_check(event_text, action_display, action_key)
+signal double_detected(event_text, action_display, action_key)
 
 func set_new_action_event(action,event,old_event) -> void:
 	ui_case_handler(event, action)
@@ -147,9 +181,11 @@ func ui_case_handler(event, action) -> void: #TODO: resolver bug de seta não fu
 		InputMap.action_set_deadzone(extra_action,.85)
 
 func switch_events(event, action, old_event) -> void:
-	if not old_event:
-		InputMap.action_erase_events(action)
-	else:
+	if old_event:
 		InputMap.action_erase_event(action, old_event)
 	InputMap.action_add_event(action, event)
 	InputMap.action_set_deadzone(action,.85)
+
+func clear_action_event(action, old_event) -> void:
+	if old_event:
+		InputMap.action_erase_event(action, old_event)
