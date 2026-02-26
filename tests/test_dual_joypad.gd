@@ -21,6 +21,8 @@ func _init() -> void:
 	test_joypad_axis_binding()
 	test_conflict_groups()
 	test_short_joy_names()
+	test_axis_index_fallback()
+	test_unmapped_controller_names()
 
 	print("\n=== Results: %d passed, %d failed ===" % [pass_count, fail_count])
 	if fail_count > 0:
@@ -306,6 +308,16 @@ func test_short_joy_names() -> void:
 		"Left Trigger": "LT",
 		"Right Trigger": "RT",
 	}
+	var axis_index_names := {
+		0: "LX", 1: "LY", 2: "LT",
+		3: "RX", 4: "RY", 5: "RT",
+	}
+	var axis_dirs := {
+		"LX": ["L", "R"],
+		"LY": ["U", "D"],
+		"RX": ["L", "R"],
+		"RY": ["U", "D"],
+	}
 
 	# Button abbreviations
 	assert_eq(btn_short.get("Face Button Bottom", "Face Button Bottom"), "A", "Face Button Bottom -> A")
@@ -320,3 +332,267 @@ func test_short_joy_names() -> void:
 
 	# Unknown names pass through
 	assert_eq(btn_short.get("Unknown Button", "Unknown Button"), "Unknown Button", "Unknown passes through")
+
+func test_axis_index_fallback() -> void:
+	print("test_axis_index_fallback:")
+	# Replicate short_joy_axis logic with AXIS_INDEX_NAMES fallback
+	var axis_short := {
+		"Left Stick X": "LX", "Left Stick Y": "LY",
+		"Right Stick X": "RX", "Right Stick Y": "RY",
+		"Left Trigger": "LT", "Right Trigger": "RT",
+	}
+	var axis_index_names := {
+		0: "LX", 1: "LY", 2: "LT",
+		3: "RX", 4: "RY", 5: "RT",
+	}
+	var axis_dirs := {
+		"LX": ["L", "R"], "LY": ["U", "D"],
+		"RX": ["L", "R"], "RY": ["U", "D"],
+	}
+
+	# Simulate short_joy_axis for the exact bug case:
+	# Input.get_joy_axis_string(4) returns "" on xpad
+	var full_name := ""  # empty, as returned by Input.get_joy_axis_string(4)
+	var axis := 4
+	var base_name: String
+
+	# OLD behavior (falls to Ax%d, no direction)
+	if full_name in axis_short:
+		base_name = axis_short[full_name]
+	elif full_name != "":
+		base_name = full_name
+	elif axis >= 0:
+		base_name = "Ax%d" % axis
+	assert_eq(base_name, "Ax4", "[OLD] axis 4 with empty name -> Ax4")
+	assert_true(not (base_name in axis_dirs), "[OLD] Ax4 not in axis_dirs, no direction")
+
+	# NEW behavior (falls to AXIS_INDEX_NAMES, gets RY, then direction)
+	base_name = ""
+	if full_name in axis_short:
+		base_name = axis_short[full_name]
+	elif full_name != "":
+		base_name = full_name
+	elif axis in axis_index_names:
+		base_name = axis_index_names[axis]
+	elif axis >= 0:
+		base_name = "Ax%d" % axis
+	assert_eq(base_name, "RY", "[NEW] axis 4 with empty name -> RY via index lookup")
+	assert_true(base_name in axis_dirs, "[NEW] RY is in axis_dirs")
+
+	# Test direction suffix for RY
+	var axis_value_up := -1.0
+	var axis_value_down := 1.0
+	if base_name in axis_dirs and axis_value_up != 0.0:
+		var dir_up = axis_dirs[base_name][0] if axis_value_up < 0 else axis_dirs[base_name][1]
+		assert_eq(base_name + " " + dir_up, "RY U", "axis 4 value=-1.0 -> RY U")
+	if base_name in axis_dirs and axis_value_down != 0.0:
+		var dir_down = axis_dirs[base_name][0] if axis_value_down < 0 else axis_dirs[base_name][1]
+		assert_eq(base_name + " " + dir_down, "RY D", "axis 4 value=1.0 -> RY D")
+
+	# All axis indices should resolve
+	for idx in axis_index_names:
+		assert_true(axis_index_names[idx] != "", "axis %d has a name" % idx)
+
+	# Trigger axes should not have direction suffixes
+	assert_true(not ("LT" in axis_dirs), "LT (axis 2) has no direction")
+	assert_true(not ("RT" in axis_dirs), "RT (axis 5) has no direction")
+
+func test_unmapped_controller_names() -> void:
+	print("test_unmapped_controller_names:")
+	# Replicate the exact short_joy_btn / short_joy_axis logic from ActionInput.gd
+	# to verify both joy_known=true (SDL-mapped) and joy_known=false (raw xpad) paths.
+
+	var JOY_BTN_SHORT := {
+		"Face Button Bottom": "A", "Face Button Right": "B",
+		"Face Button Left": "X", "Face Button Top": "Y",
+		"Left Shoulder": "LB", "Right Shoulder": "RB",
+		"Left Trigger": "LT", "Right Trigger": "RT",
+		"Left Stick": "L3", "Right Stick": "R3",
+		"DPAD Up": "D-Up", "DPAD Down": "D-Dn",
+		"DPAD Left": "D-L", "DPAD Right": "D-R",
+		"L": "LB", "L2": "LT", "L3": "L3",
+		"R": "RB", "R2": "RT", "R3": "R3",
+		"Select": "Back", "Start": "Start", "Guide": "Guide",
+	}
+	var JOY_AXIS_SHORT := {
+		"Left Stick X": "LX", "Left Stick Y": "LY",
+		"Right Stick X": "RX", "Right Stick Y": "RY",
+		"Left Trigger": "LT", "Right Trigger": "RT",
+	}
+	var AXIS_INDEX_NAMES := {
+		0: "LX", 1: "LY", 2: "LT",
+		3: "RX", 4: "RY", 5: "RT",
+	}
+	var BTN_INDEX_NAMES := {
+		0: "A", 1: "B", 2: "X", 3: "Y",
+		4: "LB", 5: "RB", 6: "Back", 7: "Start",
+		8: "Guide", 9: "L3", 10: "R3",
+		12: "D-Up", 13: "D-Dn", 14: "D-L", 15: "D-R",
+	}
+	var AXIS_DIRS := {
+		"LX": ["L", "R"], "LY": ["U", "D"],
+		"RX": ["L", "R"], "RY": ["U", "D"],
+	}
+
+	# --- Helper lambdas (replicate exact ActionInput.gd logic) ---
+	# We inline the logic since GDScript 3.x doesn't have lambdas
+
+	# ============================================================
+	# BUTTONS: joy_known=true (SDL-mapped controller)
+	# Godot returns correct names, so we trust Input.get_joy_button_string()
+	# ============================================================
+	print("  -- Buttons: joy_known=true (SDL-mapped controller) --")
+
+	# Godot standard: btn 0 = "Face Button Bottom" → A
+	var result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Face Button Bottom", 0, true)
+	assert_eq(result, "A", "[known] btn 0 'Face Button Bottom' -> A")
+
+	# Godot standard: btn 6 = "L2" → LT (correct for SDL controller where btn 6 IS L2)
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "L2", 6, true)
+	assert_eq(result, "LT", "[known] btn 6 'L2' -> LT (correct for SDL)")
+
+	# Godot standard: btn 7 = "R2" → RT
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "R2", 7, true)
+	assert_eq(result, "RT", "[known] btn 7 'R2' -> RT (correct for SDL)")
+
+	# Godot standard: btn 8 = "L3"
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "L3", 8, true)
+	assert_eq(result, "L3", "[known] btn 8 'L3' -> L3 (correct for SDL)")
+
+	# Godot standard: btn 9 = "R3"
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "R3", 9, true)
+	assert_eq(result, "R3", "[known] btn 9 'R3' -> R3 (correct for SDL)")
+
+	# Godot standard: btn 10 = "Select" → Back
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Select", 10, true)
+	assert_eq(result, "Back", "[known] btn 10 'Select' -> Back (correct for SDL)")
+
+	# Godot standard: btn 11 = "Start"
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Start", 11, true)
+	assert_eq(result, "Start", "[known] btn 11 'Start' -> Start (correct for SDL)")
+
+	# ============================================================
+	# BUTTONS: joy_known=false (unmapped xpad controller)
+	# Godot returns WRONG names for indices 6-10, so use raw index table
+	# ============================================================
+	print("  -- Buttons: joy_known=false (unmapped xpad) --")
+
+	# Buttons 0-5 match, but we still use raw table (which has same values)
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Face Button Bottom", 0, false)
+	assert_eq(result, "A", "[unmapped] btn 0 -> A")
+
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Left Shoulder", 4, false)
+	assert_eq(result, "LB", "[unmapped] btn 4 -> LB")
+
+	# btn 6: Godot says "L2"→LT but xpad says Back
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "L2", 6, false)
+	assert_eq(result, "Back", "[unmapped] btn 6 -> Back (NOT LT)")
+
+	# btn 7: Godot says "R2"→RT but xpad says Start
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "R2", 7, false)
+	assert_eq(result, "Start", "[unmapped] btn 7 -> Start (NOT RT)")
+
+	# btn 8: Godot says "L3" but xpad says Guide
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "L3", 8, false)
+	assert_eq(result, "Guide", "[unmapped] btn 8 -> Guide (NOT L3)")
+
+	# btn 9: Godot says "R3" but xpad says L3
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "R3", 9, false)
+	assert_eq(result, "L3", "[unmapped] btn 9 -> L3 (NOT R3)")
+
+	# btn 10: Godot says "Select"→Back but xpad says R3
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "Select", 10, false)
+	assert_eq(result, "R3", "[unmapped] btn 10 -> R3 (NOT Back)")
+
+	# DPAD buttons match (12-15)
+	result = _short_btn(JOY_BTN_SHORT, BTN_INDEX_NAMES, "DPAD Up", 12, false)
+	assert_eq(result, "D-Up", "[unmapped] btn 12 -> D-Up")
+
+	# ============================================================
+	# AXES: joy_known=true (SDL-mapped controller)
+	# ============================================================
+	print("  -- Axes: joy_known=true (SDL-mapped controller) --")
+
+	# SDL axis 0 = "Left Stick X" → LX (matches for both)
+	var axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Left Stick X", 0, -1.0, true)
+	assert_eq(axis_result, "LX L", "[known] axis 0 'Left Stick X' val=-1.0 -> LX L")
+
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Left Stick Y", 1, 1.0, true)
+	assert_eq(axis_result, "LY D", "[known] axis 1 'Left Stick Y' val=1.0 -> LY D")
+
+	# SDL axis 2 = "Right Stick X" → RX (correct for SDL where axis 2 IS RX)
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Right Stick X", 2, -1.0, true)
+	assert_eq(axis_result, "RX L", "[known] axis 2 'Right Stick X' val=-1.0 -> RX L (correct for SDL)")
+
+	# SDL axis 3 = "Right Stick Y" → RY (correct for SDL where axis 3 IS RY)
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Right Stick Y", 3, -1.0, true)
+	assert_eq(axis_result, "RY U", "[known] axis 3 'Right Stick Y' val=-1.0 -> RY U (correct for SDL)")
+
+	# SDL axis 6 = "Left Trigger" → LT (no direction for triggers)
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Left Trigger", 6, 1.0, true)
+	assert_eq(axis_result, "LT", "[known] axis 6 'Left Trigger' -> LT (no direction)")
+
+	# ============================================================
+	# AXES: joy_known=false (unmapped xpad controller)
+	# ============================================================
+	print("  -- Axes: joy_known=false (unmapped xpad) --")
+
+	# xpad axis 0 = LX (matches standard)
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Left Stick X", 0, 1.0, false)
+	assert_eq(axis_result, "LX R", "[unmapped] axis 0 val=1.0 -> LX R")
+
+	# xpad axis 2: Godot says "Right Stick X"→RX, but xpad says LT
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Right Stick X", 2, 1.0, false)
+	assert_eq(axis_result, "LT", "[unmapped] axis 2 -> LT (NOT RX)")
+
+	# xpad axis 3: Godot says "Right Stick Y"→RY, but xpad says RX
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Right Stick Y", 3, -1.0, false)
+	assert_eq(axis_result, "RX L", "[unmapped] axis 3 val=-1.0 -> RX L (NOT RY U)")
+
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "Right Stick Y", 3, 1.0, false)
+	assert_eq(axis_result, "RX R", "[unmapped] axis 3 val=1.0 -> RX R")
+
+	# xpad axis 4: Godot returns "" (undefined), xpad says RY
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "", 4, -1.0, false)
+	assert_eq(axis_result, "RY U", "[unmapped] axis 4 val=-1.0 -> RY U")
+
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "", 4, 1.0, false)
+	assert_eq(axis_result, "RY D", "[unmapped] axis 4 val=1.0 -> RY D")
+
+	# xpad axis 5: Godot returns "" (undefined), xpad says RT
+	axis_result = _short_axis(JOY_AXIS_SHORT, AXIS_INDEX_NAMES, AXIS_DIRS, "", 5, 1.0, false)
+	assert_eq(axis_result, "RT", "[unmapped] axis 5 -> RT (no direction)")
+
+# --- Helper functions replicating ActionInput.gd logic exactly ---
+
+func _short_btn(btn_short: Dictionary, btn_index: Dictionary, full_name: String, button_index: int, joy_known: bool) -> String:
+	if not joy_known and button_index in btn_index:
+		return btn_index[button_index]
+	if full_name in btn_short:
+		return btn_short[full_name]
+	if full_name != "":
+		return full_name
+	if button_index in btn_index:
+		return btn_index[button_index]
+	if button_index >= 0:
+		return "Btn%d" % button_index
+	return "???"
+
+func _short_axis(axis_short: Dictionary, axis_index: Dictionary, axis_dirs: Dictionary, full_name: String, axis: int, axis_value: float, joy_known: bool) -> String:
+	var base_name: String
+	if not joy_known and axis in axis_index:
+		base_name = axis_index[axis]
+	elif full_name in axis_short:
+		base_name = axis_short[full_name]
+	elif full_name != "":
+		base_name = full_name
+	elif axis in axis_index:
+		base_name = axis_index[axis]
+	elif axis >= 0:
+		base_name = "Ax%d" % axis
+	else:
+		return "???"
+	if base_name in axis_dirs and axis_value != 0.0:
+		var dir = axis_dirs[base_name][0] if axis_value < 0 else axis_dirs[base_name][1]
+		return base_name + " " + dir
+	return base_name

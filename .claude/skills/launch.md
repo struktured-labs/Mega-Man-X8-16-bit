@@ -5,38 +5,37 @@ Use when the user wants to launch, start, run, or play the Mega Man X8 16-bit de
 
 ## Instructions
 
-Launch the game using Wine from `~/gaming/demakes/` (do NOT use Wine virtual desktop — it lands on the wrong monitor):
+### Step 1: Kill any existing instance
+```bash
+pkill -f godot3
+```
+Wait briefly if needed, but do NOT chain with the launch command.
 
+### Step 2: Launch the game
+**From source (default — use this when modifying code):**
+```bash
+~/bin/godot3 --path /home/struktured/projects/megaman-x8-16bit-demake &
+```
+
+**From release build (Wine):**
 ```bash
 cd ~/gaming/demakes && wine "Mega Man X8 16-bit 1.0.0.9.exe" &
 ```
 
-Then wait for the window to appear and resize via KWin scripting (xdotool can't reliably set the full size):
-
+### Step 3: Verify it's running
 ```bash
-sleep 3
-cat <<'SCRIPT' > /tmp/kwin_resize.js
-var clients = workspace.windowList();
-for (var i = 0; i < clients.length; i++) {
-    var c = clients[i];
-    if (c.caption.indexOf("Mega Man") !== -1) {
-        c.frameGeometry = {x: 726, y: 20, width: 2571, height: 1342};
-    }
-}
-SCRIPT
-SCRIPT_ID=$(dbus-send --session --dest=org.kde.KWin --print-reply --type=method_call /Scripting org.kde.kwin.Scripting.loadScript string:"/tmp/kwin_resize.js" | grep int32 | awk '{print $2}') && dbus-send --session --dest=org.kde.KWin --type=method_call /Scripting/Script$SCRIPT_ID org.kde.kwin.Script.run
+sleep 1 && pgrep -f godot3
 ```
 
-Verify it's running and sized correctly:
-
+### Step 4: Fullscreen (optional, on request)
 ```bash
-pgrep -fa "Mega Man"
-xdotool search --name "Mega Man" getwindowgeometry
+qdbus6 org.kde.kglobalaccel /component/kwin invokeShortcut "Window Fullscreen"
 ```
 
-**Important:**
-- Launch with `&` and NO pipes or redirects (they break window visibility on Wayland)
-- Do NOT use `wine explorer /desktop=` — it lands on the wrong monitor (Dell instead of LG)
-- Preferred client size: **2569x1313** at position **(727, 48)** on DP-1 (LG ultrawide, primary)
-- Use KWin DBus scripting for resize, not xdotool (which caps the height)
-- Confirm the process is running with `pgrep` after launch
+## CRITICAL Rules
+- **Each step must be a SEPARATE Bash tool call** — no chaining kill+launch or launch+verify in one command
+- Launch with `&` and **NO pipes or redirects** (they break window visibility on Wayland)
+- Do NOT use `wine explorer /desktop=` — it lands on the wrong monitor
+- The source launch uses `~/bin/godot3` (Godot 3.6), NOT system `godot` (which is 4.4)
+- Preferred display: DP-1 (LG ultrawide 3440x1440, primary monitor)
+- For resize, use the `/resize` skill

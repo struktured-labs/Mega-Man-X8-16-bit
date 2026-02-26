@@ -27,6 +27,17 @@ const JOY_BTN_SHORT := {
 	"R": "RB",
 	"R2": "RT",
 	"R3": "R3",
+	"Select": "Back",
+	"Start": "Start",
+	"Guide": "Guide",
+}
+
+# Axis direction suffixes: axis_name -> [negative_suffix, positive_suffix]
+const AXIS_DIRS := {
+	"LX": ["L", "R"],
+	"LY": ["U", "D"],
+	"RX": ["L", "R"],
+	"RY": ["U", "D"],
 }
 
 const JOY_AXIS_SHORT := {
@@ -38,15 +49,53 @@ const JOY_AXIS_SHORT := {
 	"Right Trigger": "RT",
 }
 
-static func short_joy_btn(full_name: String) -> String:
+# Direct axis index → short name (for controllers where Input.get_joy_axis_string() returns "")
+const AXIS_INDEX_NAMES := {
+	0: "LX", 1: "LY", 2: "LT",
+	3: "RX", 4: "RY", 5: "RT",
+}
+
+# Raw xpad button index → short name (indices 6-10 differ from Godot's standard SDL mapping)
+const BTN_INDEX_NAMES := {
+	0: "A", 1: "B", 2: "X", 3: "Y",
+	4: "LB", 5: "RB", 6: "Back", 7: "Start",
+	8: "Guide", 9: "L3", 10: "R3",
+	12: "D-Up", 13: "D-Dn", 14: "D-L", 15: "D-R",
+}
+
+static func short_joy_btn(full_name: String, button_index: int = -1, joy_known: bool = true) -> String:
+	if not joy_known and button_index in BTN_INDEX_NAMES:
+		return BTN_INDEX_NAMES[button_index]
 	if full_name in JOY_BTN_SHORT:
 		return JOY_BTN_SHORT[full_name]
-	return full_name
+	if full_name != "":
+		return full_name
+	if button_index in BTN_INDEX_NAMES:
+		return BTN_INDEX_NAMES[button_index]
+	if button_index >= 0:
+		return "Btn%d" % button_index
+	return "???"
 
-static func short_joy_axis(full_name: String) -> String:
-	if full_name in JOY_AXIS_SHORT:
-		return JOY_AXIS_SHORT[full_name]
-	return full_name
+static func short_joy_axis(full_name: String, axis: int = -1, axis_value: float = 0.0, joy_known: bool = true) -> String:
+	var base_name: String
+	# For unmapped controllers, always use raw index table (Godot returns wrong names)
+	if not joy_known and axis in AXIS_INDEX_NAMES:
+		base_name = AXIS_INDEX_NAMES[axis]
+	elif full_name in JOY_AXIS_SHORT:
+		base_name = JOY_AXIS_SHORT[full_name]
+	elif full_name != "":
+		base_name = full_name
+	elif axis in AXIS_INDEX_NAMES:
+		base_name = AXIS_INDEX_NAMES[axis]
+	elif axis >= 0:
+		base_name = "Ax%d" % axis
+	else:
+		return "???"
+	# Append direction for stick axes
+	if base_name in AXIS_DIRS and axis_value != 0.0:
+		var dir = AXIS_DIRS[base_name][0] if axis_value < 0 else AXIS_DIRS[base_name][1]
+		return base_name + " " + dir
+	return base_name
 
 func setup(_action, readname, menu) -> void:
 	key.connect_lock_signals(menu)
@@ -61,15 +110,16 @@ func setup(_action, readname, menu) -> void:
 
 func get_inputs_and_set_names(_action = action) -> void:
 	var inputs = InputMap.get_action_list(_action)
+	var joy_known := Input.is_joy_known(0)
 	var named_keyboard := false
 	var joypad_count := 0
 	for button in inputs:
 		if (button is InputEventJoypadButton or button is InputEventJoypadMotion) and joypad_count < 2:
 			var target = joypad if joypad_count == 0 else joypad2
 			if button is InputEventJoypadButton:
-				target.set_text(short_joy_btn(Input.get_joy_button_string(button.button_index)))
+				target.set_text(short_joy_btn(Input.get_joy_button_string(button.button_index), button.button_index, joy_known))
 			elif button is InputEventJoypadMotion:
-				target.set_text(short_joy_axis(Input.get_joy_axis_string(button.axis)))
+				target.set_text(short_joy_axis(Input.get_joy_axis_string(button.axis), button.axis, button.axis_value, joy_known))
 			target.original_event = button
 			joypad_count += 1
 		elif (button is InputEventKey) and not named_keyboard:
