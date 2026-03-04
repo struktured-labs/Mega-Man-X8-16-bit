@@ -104,6 +104,10 @@ WPNRESET_ACT,select buster,selec. Buster,Selec. Buster,selec. Buster
 ARMORSETUP_TITLE,Armor Setup,Armadura,Armadura,Fashion Souls
 LOADOUT_DISC,Choose your loadout.,Escolha sua armadura,Elige Tu Armadura,3 por 15
 EXIT_BUTTON,Exit,Sair,Salir,Vazar
+PROFILE_LABEL,Profile,Perfil,Perfil,Perfil
+PROFILE_CUSTOM,Custom,Personalizado,Personalizado,Personalizado
+PROFILE_DEFAULT,Default,Padrão,Predeterminado,Padrão
+PROFILE_STRUKTURED,Struktured,Struktured,Struktured,Struktured
 ,,,,
 STAGE_DC,Stage,Fase,Nivel,Engenho
 BOSS_DC,Boss,Chefe,Jefe,Capitão do Mato

@@ -26,9 +26,11 @@ var configurable = {
 }
 
 onready var exit: TextureButton = $"../../exit"
+onready var profile_btn = $"../../ProfileRow/Button"
 
 func _ready() -> void:
 	Setup_actions()
+	InputManager.connect("profile_applied", self, "refresh_all_actions")
 
 func Setup_actions() -> void:
 	var last_child
@@ -43,11 +45,19 @@ func instantiate(action) -> Node:
 	return instance
 
 func Set_neighbours(last_child) -> void:
+	# Focus chain: exit ↔ profile selector ↔ first action ... last action ↔ exit
 	exit.focus_neighbour_top = last_child.get_child(0).get_path()
-	exit.focus_neighbour_bottom = get_child(0).get_child(0).get_path()
-	get_child(0).get_child(0).focus_neighbour_top = exit.get_path()
-	get_child(0).get_child(1).focus_neighbour_top = exit.get_path()
-	get_child(0).get_child(2).focus_neighbour_top = exit.get_path()
+	exit.focus_neighbour_bottom = profile_btn.get_path()
+	profile_btn.focus_neighbour_top = exit.get_path()
+	profile_btn.focus_neighbour_bottom = get_child(0).get_child(0).get_path()
+	get_child(0).get_child(0).focus_neighbour_top = profile_btn.get_path()
+	get_child(0).get_child(1).focus_neighbour_top = profile_btn.get_path()
+	get_child(0).get_child(2).focus_neighbour_top = profile_btn.get_path()
 	last_child.get_child(0).focus_neighbour_bottom = exit.get_path()
 	last_child.get_child(1).focus_neighbour_bottom = exit.get_path()
 	last_child.get_child(2).focus_neighbour_bottom = exit.get_path()
+
+func refresh_all_actions() -> void:
+	for child in get_children():
+		if child.has_method("get_inputs_and_set_names"):
+			child.get_inputs_and_set_names()
