@@ -99,6 +99,7 @@ func _input(event: InputEvent) -> void:
 
 func set_new_action_event(event) -> void:
 	InputManager.set_new_action_event(get_parent().action,event,original_event)
+	InputManager.emit_signal("manual_rebind")
 	emit_signal("updated_event")
 	waiting_for_input = false
 	timer = 0
