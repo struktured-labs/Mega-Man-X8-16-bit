@@ -11,9 +11,6 @@ var modified_keys = {}
 
 var combos : Dictionary
 
-var _joy_log_file : File
-var _joy_log_path := "user://joy_log.txt"
-
 # Conflict groups: actions in the same group warn when sharing a button
 var conflict_groups := {
 	"gameplay": [
@@ -38,19 +35,7 @@ func actions_can_conflict(action_a: String, action_b: String) -> bool:
 	return group_a != "" and group_a == group_b
 
 func _input(_event: InputEvent) -> void:
-	# TEMP: Log all joypad events to file
-	if _event is InputEventJoypadButton:
-		_log_joy("BTN %d pressed=%s" % [_event.button_index, str(_event.pressed)])
-	elif _event is InputEventJoypadMotion:
-		if abs(_event.axis_value) > 0.15:
-			_log_joy("AXIS %d value=%.3f" % [_event.axis, _event.axis_value])
-
-func _log_joy(msg: String) -> void:
-	if not _joy_log_file:
-		_joy_log_file = File.new()
-		_joy_log_file.open(_joy_log_path, File.WRITE)
-	_joy_log_file.store_line(str(OS.get_ticks_msec()) + " " + msg)
-	_joy_log_file.flush()
+	pass
 
 func _ready() -> void:
 	var _s = Configurations.connect("value_changed",self,"activate_dash")
@@ -138,13 +123,17 @@ func add_to_file(action,event,old_event):
 		modified_keys[new_action] = [event, old_event]
 
 func load_modified_keys(new_keys) -> void:
-	# TEMP: Force-reset all keybinds to defaults (remove after confirming controller works)
-	print("InputManager: Resetting all keybinds to defaults")
-	modified_keys.clear()
-	InputMap.load_from_globals()
-	# Force English locale
 	TranslationServer.set_locale("en")
-	return
+	if new_keys:
+		modified_keys.clear()
+		for action in new_keys:
+			var actual_action = action.trim_prefix("00_")
+			var new_key = str2var(new_keys[action][0])
+			var current_key = get_default_key(actual_action, str2var(new_keys[action][1]))
+			set_new_action_event(actual_action, new_key, current_key)
+		Savefile.save()
+	else:
+		modified_keys.clear()
 
 func get_default_key(action, old_event) -> InputEvent:
 	var InputType = define_event_type(old_event)
@@ -167,18 +156,21 @@ func define_event_type(event):
 
 signal double_check(event_text, action_display, action_key, input_type)
 signal double_detected(event_text, action_display, action_key, input_type)
+signal profile_applied
+signal manual_rebind
 
 func set_new_action_event(action,event,old_event) -> void:
-	ui_case_handler(event, action)
+	ui_case_handler(event, action, old_event)
 	switch_events(event, action, old_event)
 	add_to_file(action,var2str(event),var2str(old_event))
 
-func ui_case_handler(event, action) -> void: #TODO: resolver bug de seta não funcionando no menu
+func ui_case_handler(event, action, old_event = null) -> void:
 	if "move" in action:
 		var extra_action = "ui" + action.trim_prefix("move")
-		InputMap.action_erase_events(extra_action)
+		if old_event:
+			InputMap.action_erase_event(extra_action, old_event)
 		InputMap.action_add_event(extra_action, event)
-		InputMap.action_set_deadzone(extra_action,.85)
+		InputMap.action_set_deadzone(extra_action, .85)
 
 func switch_events(event, action, old_event) -> void:
 	if old_event:
@@ -189,3 +181,59 @@ func switch_events(event, action, old_event) -> void:
 func clear_action_event(action, old_event) -> void:
 	if old_event:
 		InputMap.action_erase_event(action, old_event)
+
+# --- Controller profiles ---
+
+const ControllerProfiles = preload("res://src/Options/KeyBinder/ControllerProfiles.gd")
+
+# All actions that profiles can override
+const CONFIGURABLE_ACTIONS := [
+	"move_left", "move_right", "move_up", "move_down",
+	"fire", "alt_fire", "jump", "dash",
+	"select_special", "weapon_select_left", "weapon_select_right",
+	"pause", "ui_accept",
+	"analog_left", "analog_right", "analog_up", "analog_down",
+	"reset_weapon"
+]
+
+func apply_joypad_profile(profile_data: Dictionary) -> void:
+	# Strip existing joypad events from all configurable actions (+ ui_ mirrors)
+	for action in CONFIGURABLE_ACTIONS:
+		_strip_joypad_events(action)
+		if action.begins_with("move_"):
+			_strip_joypad_events("ui" + action.trim_prefix("move"))
+
+	# Remove joypad-related entries from modified_keys (keep keyboard rebinds)
+	var kept := {}
+	for key in modified_keys:
+		var ev = str2var(modified_keys[key][0])
+		if ev is InputEventKey or ev is InputEventMouseButton:
+			kept[key] = modified_keys[key]
+	modified_keys = kept
+
+	# Apply profile's joypad events
+	for action in profile_data:
+		var event_dicts: Array = profile_data[action]
+		for i in event_dicts.size():
+			var new_ev = ControllerProfiles.event_from_dict(event_dicts[i])
+			if not new_ev:
+				continue
+			InputMap.action_add_event(action, new_ev)
+			# Track in modified_keys for persistence
+			if i == 0:
+				modified_keys[action] = [var2str(new_ev), ""]
+			else:
+				modified_keys["00_" + action] = [var2str(new_ev), ""]
+			# Mirror movement actions to ui_ equivalents
+			if action.begins_with("move_"):
+				var ui_action = "ui" + action.trim_prefix("move")
+				InputMap.action_add_event(ui_action, new_ev)
+				InputMap.action_set_deadzone(ui_action, 0.85)
+
+	Savefile.save()
+	emit_signal("profile_applied")
+
+func _strip_joypad_events(action: String) -> void:
+	for ev in InputMap.get_action_list(action):
+		if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+			InputMap.action_erase_event(action, ev)
