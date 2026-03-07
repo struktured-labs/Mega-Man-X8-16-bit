@@ -2,36 +2,33 @@ extends X8OptionButton
 
 const native = Vector2(398, 224)
 const w_size := "WindowSize"
-var current_multiplier = 1
+var current_multiplier = 3
 
 
 func setup() -> void:
-	current_multiplier = get_windowsize()
-	display_value(current_multiplier)
-	set_windowsize(current_multiplier)
+	var saved = Configurations.get(w_size)
+	if saved and saved >= 1 and saved <= 10:
+		current_multiplier = saved
+		_display_current()
+	else:
+		display_value(_size_str(OS.get_window_size()))
 
 func increase_value() -> void:
-	increase_multiplier(1)
-	set_windowsize(current_multiplier)
-	
-func decrease_value() -> void:
-	increase_multiplier(-1)
-	set_windowsize(current_multiplier)
+	current_multiplier = (current_multiplier % 10) + 1
+	_apply()
 
-func set_windowsize(multiplier):
-	current_multiplier = multiplier
-	Configurations.set(w_size,current_multiplier)
-	display_value(current_multiplier)
+func decrease_value() -> void:
+	current_multiplier = ((current_multiplier - 2 + 10) % 10) + 1
+	_apply()
+
+func _apply() -> void:
+	Configurations.set(w_size, current_multiplier)
+	_display_current()
 	if not Configurations.get("Fullscreen"):
 		OS.set_window_size(native * current_multiplier)
-	pass
 
-func get_windowsize():
-	var ws = Configurations.get(w_size)
-	if ws:
-		return ws
-	else:
-		return 3
+func _display_current() -> void:
+	display_value(_size_str(native * current_multiplier))
 
-func increase_multiplier(value) -> void:
-	current_multiplier = clamp(current_multiplier+value,1,10)
+func _size_str(size: Vector2) -> String:
+	return str(int(size.x)) + "x" + str(int(size.y))
