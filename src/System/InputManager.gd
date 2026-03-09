@@ -173,10 +173,11 @@ func ui_case_handler(event, action, old_event = null) -> void:
 		InputMap.action_set_deadzone(extra_action, .85)
 
 func switch_events(event, action, old_event) -> void:
+	var dz = InputMap.action_get_deadzone(action)
 	if old_event:
 		InputMap.action_erase_event(action, old_event)
 	InputMap.action_add_event(action, event)
-	InputMap.action_set_deadzone(action,.85)
+	InputMap.action_set_deadzone(action, dz)
 
 func clear_action_event(action, old_event) -> void:
 	if old_event:

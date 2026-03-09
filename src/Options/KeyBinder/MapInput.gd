@@ -80,6 +80,16 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		return
 	elif timer > 0.25:
+		# Cancel waiting with Escape
+		if event is InputEventKey and not event.is_pressed():
+			if event.scancode == KEY_ESCAPE:
+				waiting_for_input = false
+				timer = 0
+				set_text(old_text)
+				text.self_modulate.a = 1.0
+				menu.emit_signal("unlock_buttons")
+				grab_focus()
+				return
 		# Clear binding with Delete or Backspace
 		if event is InputEventKey and not event.is_pressed():
 			if event.scancode == KEY_DELETE or event.scancode == KEY_BACKSPACE:

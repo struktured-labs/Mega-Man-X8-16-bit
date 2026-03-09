@@ -23,6 +23,7 @@
 [ext_resource path="res://src/Options/CRTButton.gd" type="Script" id=21]
 [ext_resource path="res://src/Options/AchievButton.gd" type="Script" id=22]
 [ext_resource path="res://src/Options/clearachiev.gd" type="Script" id=23]
+[ext_resource path="res://src/Options/SubWeaponOption.gd" type="Script" id=24]
 
 [sub_resource type="ShortCut" id=1]
 
@@ -273,10 +274,68 @@ align = 2
 valign = 1
 uppercase = true
 
-[node name="Charge Fadeout" type="Control" parent="Menu/scrollContainer/OptionHolder"]
+[node name="Disable Subweapons" type="Control" parent="Menu/scrollContainer/OptionHolder"]
 margin_top = 33.0
 margin_right = 200.0
 margin_bottom = 41.0
+rect_min_size = Vector2( 200, 8 )
+size_flags_horizontal = 0
+script = ExtResource( 4 )
+objects_to_light = [ NodePath("OptionName") ]
+focus_group = [ NodePath("Button") ]
+idle_color = Color( 0.407843, 0.792157, 1, 1 )
+focus_color = Color( 0.984314, 1, 0.686275, 1 )
+
+[node name="OptionName" type="Label" parent="Menu/scrollContainer/OptionHolder/Disable Subweapons"]
+modulate = Color( 0.407843, 0.792157, 1, 1 )
+anchor_top = 0.5
+anchor_bottom = 0.5
+margin_top = -9.0
+margin_right = 92.0
+margin_bottom = 5.0
+custom_colors/font_color_shadow = Color( 0.415686, 0.415686, 0.415686, 1 )
+custom_constants/shadow_offset_x = 1
+custom_constants/shadow_offset_y = 1
+custom_fonts/font = ExtResource( 1 )
+text = "Disable Subweapons"
+uppercase = true
+
+[node name="Button" type="TextureButton" parent="Menu/scrollContainer/OptionHolder/Disable Subweapons"]
+modulate = Color( 0.490196, 0.490196, 0.490196, 1 )
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -200.0
+margin_top = -6.0
+margin_bottom = 2.0
+rect_min_size = Vector2( 0, 8 )
+action_mode = 0
+shortcut = SubResource( 1 )
+script = ExtResource( 24 )
+menu_path = NodePath("../../../../..")
+
+[node name="Value" type="Label" parent="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button"]
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -135.0
+margin_top = -7.0
+margin_bottom = 7.0
+custom_colors/font_color_shadow = Color( 0.415686, 0.415686, 0.415686, 1 )
+custom_constants/shadow_offset_x = 1
+custom_constants/shadow_offset_y = 1
+custom_fonts/font = ExtResource( 1 )
+text = "Value"
+align = 2
+valign = 1
+uppercase = true
+
+[node name="Charge Fadeout" type="Control" parent="Menu/scrollContainer/OptionHolder"]
+margin_top = 44.0
+margin_right = 200.0
+margin_bottom = 52.0
 rect_min_size = Vector2( 200, 8 )
 size_flags_horizontal = 0
 script = ExtResource( 4 )
@@ -973,6 +1032,12 @@ menu = NodePath("../Menu")
 [connection signal="mouse_entered" from="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" to="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" to="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" method="_on_mouse_exited"]
 [connection signal="pressed" from="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" to="Menu/scrollContainer/OptionHolder/Skip Dialogs/Button" method="_on_pressed"]
+[connection signal="translation_updated" from="Menu/scrollContainer/OptionHolder/Language/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="display_subweapon"]
+[connection signal="focus_entered" from="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="_on_focus_entered"]
+[connection signal="focus_exited" from="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="_on_focus_exited"]
+[connection signal="mouse_entered" from="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="_on_mouse_exited"]
+[connection signal="pressed" from="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" to="Menu/scrollContainer/OptionHolder/Disable Subweapons/Button" method="_on_pressed"]
 [connection signal="focus_entered" from="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" to="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" method="_on_focus_entered"]
 [connection signal="focus_exited" from="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" to="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" method="_on_focus_exited"]
 [connection signal="mouse_entered" from="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" to="Menu/scrollContainer/OptionHolder/Charge Fadeout/Button" method="_on_mouse_entered"]

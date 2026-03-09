@@ -66,6 +66,7 @@ ON_VALUE,ON,Ativo,ON,Ativo
 OFF_VALUE,OFF,Desl.,OFF,Desl.
 LANGUAGE_OPTION,Language,Idioma,Idioma,Idioma
 SKIP_DIAG_OPTION,Skippable Dialogs,Diálogos Puláveis,Diálogos Omitibles,Não gosto de ler
+DISABLE_SUBWPN,Disable Subweapons,Desativar Subarmas,Desactivar Subarmas,Desativar Subarmas
 CRT_OPTION,CRT Filter,Filtro CRT,Filtro CRT,TV de Tubo
 LIGHT_VALUE,Light,Leve,Tenue,Levin
 STRONG_VALUE,Strong,Forte,Fuerte,Brabo
@@ -615,3 +616,4 @@ SECRET3-6,Sounds more like you're a filthy bounty hunter.,Você não passa de um
 SECRET3-7,You are free to think whatever you want. I'm not backing down... Get Ready!,"Pense o que quiser, eu não vou recuar agora. Prepare-se!",Eres libre de pensar lo que quieras. No me voy a echar atrás... ¡Prepárate!,"Pense o que quiser, eu não vou recuar agora. Prepare-se!"
 ,,,,
 SECRET3-8,Not bad... \nFor an old timer...,Nada mau... Para um velhote...,No está mal... \nPara un anciano...,X7 demake... É o caralho...  
+

@@ -18,7 +18,7 @@ var using_buttons := false
 var analogs = ["analog_left","analog_right","analog_up","analog_down"]
 
 func _input(event: InputEvent) -> void:
-	if not active:
+	if not active or Configurations.get("DisableSubweapons"):
 		return
 	
 	if not using_buttons:
@@ -68,6 +68,10 @@ func deactivate():
 	active = false
 
 func _physics_process(delta: float) -> void:
+	if Configurations.get("DisableSubweapons"):
+		cursor.position = Vector2.ZERO
+		modulate.a = 0
+		return
 	if not using_buttons:
 		var analog_left = Input.get_action_strength("analog_left")
 		var analog_right = Input.get_action_strength("analog_right")
@@ -92,7 +96,9 @@ func selected_buster() -> void:
 
 func _on_cursor_area_entered(area: Area2D) -> void:
 	var selected = area.get_parent()
-	if selected.selectable and not selected.already_selected: 
-		selected.select() 
+	if selected.selectable and not selected.already_selected:
+		selected.select()
 		choice.play()
 		emit_signal("weapon_selected",selected)
+		if Configurations.get("DisableSubweapons"):
+			Configurations.set("DisableSubweapons", false)
